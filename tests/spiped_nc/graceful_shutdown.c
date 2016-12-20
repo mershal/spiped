@@ -9,10 +9,10 @@
 struct graceful_shutdown_cookie {
 	int (* begin_shutdown)(void *);
 	void * caller_cookie;
+	void * timer_cookie;
 };
 
 static volatile sig_atomic_t should_shutdown = 0;
-static void * graceful_shutdown_timer_cookie = NULL;
 
 /* Signal handler for SIGTERM to perform a graceful shutdown. */
 static void
@@ -30,7 +30,7 @@ graceful_shutdown(void * cookie)
 	struct graceful_shutdown_cookie * G = cookie;
 
 	/* This timer has expired. */
-	graceful_shutdown_timer_cookie = NULL;
+	G->timer_cookie = NULL;
 
 	/* Use the callback function, or schedule another check in 1 second. */
 	if (should_shutdown) {
@@ -39,7 +39,7 @@ graceful_shutdown(void * cookie)
 			exit(1);
 		}
 	} else {
-		graceful_shutdown_timer_cookie = events_timer_register_double(
+		G->timer_cookie = events_timer_register_double(
 		    graceful_shutdown, G, 1.0);
 	}
 
@@ -64,6 +64,7 @@ graceful_shutdown_register(int (* begin_shutdown)(void *),
 
 	G->begin_shutdown = begin_shutdown;
 	G->caller_cookie = caller_cookie;
+	G->timer_cookie = NULL;
 
 	/* Start signal handler. */
 	if (signal(SIGTERM, graceful_shutdown_handler) == SIG_ERR) {
@@ -72,7 +73,7 @@ graceful_shutdown_register(int (* begin_shutdown)(void *),
 	}
 
 	/* Check periodically whether a signal was received. */
-	graceful_shutdown_timer_cookie = events_timer_register_double(
+	G->timer_cookie = events_timer_register_double(
 	    graceful_shutdown, G, 1.0);
 
 	/* Success ! */
@@ -92,8 +93,9 @@ err0:
 void
 graceful_shutdown_shutdown(void * cookie)
 {
+	struct graceful_shutdown_cookie * G = cookie;
 
-	if (graceful_shutdown_timer_cookie != NULL)
-		events_timer_cancel(graceful_shutdown_timer_cookie);
+	if (G->timer_cookie != NULL)
+		events_timer_cancel(G->timer_cookie);
 	free(cookie);
 }
