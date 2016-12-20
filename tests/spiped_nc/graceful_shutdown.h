@@ -7,7 +7,7 @@
  * detected, it calls the ${callback} function and passes it the
  * ${caller_cookie}.
  */
-void * graceful_shutdown_register(void (*)(void *), void *);
+void * graceful_shutdown_register(int (*)(void *), void *);
 
 /**
  * graceful_shutdown_shutdown(cookie):

@@ -7,7 +7,7 @@
 #include "graceful_shutdown.h"
 
 struct graceful_shutdown_cookie {
-	void (* begin_shutdown)(void *);
+	int (* begin_shutdown)(void *);
 	void * caller_cookie;
 };
 
@@ -33,11 +33,15 @@ graceful_shutdown(void * cookie)
 	graceful_shutdown_timer_cookie = NULL;
 
 	/* Use the callback function, or schedule another check in 1 second. */
-	if (should_shutdown)
-		G->begin_shutdown(G->caller_cookie);
-	else
+	if (should_shutdown) {
+		if (G->begin_shutdown(G->caller_cookie) != 0) {
+			warnp("Failed to begin shutdown");
+			exit(1);
+		}
+	} else {
 		graceful_shutdown_timer_cookie = events_timer_register_double(
 		    graceful_shutdown, G, 1.0);
+	}
 
 	/* Success! */
 	return (0);
@@ -49,7 +53,7 @@ graceful_shutdown(void * cookie)
  * detected, it calls the ${callback} function and passes it the ${cookie}.
  */
 void *
-graceful_shutdown_register(void (* begin_shutdown)(void *),
+graceful_shutdown_register(int (* begin_shutdown)(void *),
     void * caller_cookie)
 {
 	struct graceful_shutdown_cookie * G;

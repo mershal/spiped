@@ -17,7 +17,7 @@ struct nc_cookie {
 
 /* Forward definition. */
 int callback_snc_response(void * cookie, uint8_t * buf, size_t buflen);
-void callback_begin_shutdown(void * C);
+int callback_begin_shutdown(void * C);
 
 /* A client sent a message. */
 int
@@ -37,11 +37,14 @@ err0:
 	return (-1);
 }
 
-void
+int
 callback_begin_shutdown(void * C)
 {
 
 	simple_server_request_shutdown(C);
+
+	/* Success! */
+	return 0;
 }
 
 int
