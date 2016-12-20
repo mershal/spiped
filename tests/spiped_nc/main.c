@@ -60,7 +60,7 @@ main(int argc, char ** argv)
 
 	/* Parse command-line arguments. */
 	if (argc < 3) {
-		fprintf(stderr, "%s PORT FILENAME\n", argv[0]);
+		fprintf(stderr, "usage: %s PORT FILENAME\n", argv[0]);
 		goto err0;
 	}
 
