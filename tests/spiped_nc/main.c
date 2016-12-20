@@ -16,11 +16,11 @@ struct nc_cookie {
 };
 
 /* Forward definition. */
-int callback_snc_response(void * cookie, uint8_t * buf, size_t buflen);
-int callback_begin_shutdown(void * C);
+static int callback_snc_response(void * cookie, uint8_t * buf, size_t buflen);
+static int callback_begin_shutdown(void * C);
 
 /* A client sent a message. */
-int
+static int
 callback_snc_response(void * cookie, uint8_t * buf, size_t buflen)
 {
 	struct nc_cookie * C = cookie;
@@ -37,7 +37,7 @@ err0:
 	return (-1);
 }
 
-int
+static int
 callback_begin_shutdown(void * C)
 {
 
