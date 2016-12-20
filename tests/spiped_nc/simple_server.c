@@ -32,6 +32,7 @@ struct conn_list_node {
 	struct conn_list_node * prev;
 	struct conn_list_node * next;
 	struct accept_state * A;
+
 	/* Reading a network message. */
 	int sock_read;
 	uint8_t buf[BUFLEN];
