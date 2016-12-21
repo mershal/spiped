@@ -36,15 +36,22 @@ graceful_shutdown(void * cookie)
 	if (should_shutdown) {
 		if (G->begin_shutdown(G->caller_cookie) != 0) {
 			warnp("Failed to begin shutdown");
-			exit(1);
+			goto err0;
 		}
 	} else {
-		G->timer_cookie = events_timer_register_double(
-		    graceful_shutdown, G, 1.0);
+		if ((G->timer_cookie = events_timer_register_double(
+		    graceful_shutdown, G, 1.0)) == NULL) {
+			warnp("Failed to register the graceful shutdown timer");
+			goto err0;
+		}
 	}
 
 	/* Success! */
 	return (0);
+
+err0:
+	/* Failure! */
+	return (-1);
 }
 
 /**
@@ -73,8 +80,11 @@ graceful_shutdown_register(int (* begin_shutdown)(void *),
 	}
 
 	/* Check periodically whether a signal was received. */
-	G->timer_cookie = events_timer_register_double(
-	    graceful_shutdown, G, 1.0);
+	if ((G->timer_cookie = events_timer_register_double(
+	    graceful_shutdown, G, 1.0)) == NULL) {
+		warnp("Failed to register graceful shutdown timer");
+		goto err1;
+	}
 
 	/* Success ! */
 	return (G);
