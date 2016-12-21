@@ -8,6 +8,7 @@
 
 struct graceful_shutdown_cookie {
 	int (* begin_shutdown)(void *);
+	void (* sighandler_sigterm_orig)(int);
 	void * caller_cookie;
 	void * timer_cookie;
 };
@@ -68,13 +69,13 @@ graceful_shutdown_register(int (* begin_shutdown)(void *),
 	/* Bake a cookie. */
 	if ((G = malloc(sizeof(struct graceful_shutdown_cookie))) == NULL)
 		goto err0;
-
 	G->begin_shutdown = begin_shutdown;
 	G->caller_cookie = caller_cookie;
 	G->timer_cookie = NULL;
 
-	/* Start signal handler. */
-	if (signal(SIGTERM, graceful_shutdown_handler) == SIG_ERR) {
+	/* Start signal handler and save the original one. */
+	if ((G->sighandler_sigterm_orig = signal(SIGTERM,
+	    graceful_shutdown_handler)) == SIG_ERR) {
 		warnp("signal");
 		goto err1;
 	}
@@ -83,12 +84,15 @@ graceful_shutdown_register(int (* begin_shutdown)(void *),
 	if ((G->timer_cookie = events_timer_register_double(
 	    graceful_shutdown, G, 1.0)) == NULL) {
 		warnp("Failed to register graceful shutdown timer");
-		goto err1;
+		goto err2;
 	}
 
 	/* Success ! */
 	return (G);
 
+err2:
+	if (signal(SIGTERM, G->sighandler_sigterm_orig) == SIG_ERR)
+		warnp("Failed to restore original SIGTERM handler");
 err1:
 	free(G);
 err0:
@@ -105,7 +109,14 @@ graceful_shutdown_shutdown(void * cookie)
 {
 	struct graceful_shutdown_cookie * G = cookie;
 
+	/* Cancel timer. */
 	if (G->timer_cookie != NULL)
 		events_timer_cancel(G->timer_cookie);
-	free(cookie);
+
+	/* Restore original SIGTERM handler. */
+	if (signal(SIGTERM, G->sighandler_sigterm_orig) == SIG_ERR)
+		warnp("Failed to restore original SIGTERM handler");
+
+	/* Clean up. */
+	free(G);
 }
